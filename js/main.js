@@ -139,7 +139,7 @@ Vue.component('col2', {
         </div>
     `,
     props: {
-        column3: {
+        column2: {
             type: Array,
         },
         card: {
@@ -164,8 +164,7 @@ Vue.component('col3', {
     template: `
         <div class="col">
             <h2>Testing</h2>
-            <li class="cards" style="background-color: #f5f287" v-for="card in column2">
-                <div class="cards" style="background-color: #f5f287" v-for="card in column3">
+            <li class="cards" style="background-color: #f5f287" v-for="card in column3">
                     <a @click="card.editB = true">Edit</a> <br>
                 <p class="card-title">{{card.title}}</p>
                 <ul>
@@ -200,7 +199,6 @@ Vue.component('col3', {
                     </li>
                 </ul>
                 <a @click="card.transfer =true">Last Column</a>  | <a @click="nextcol(card)">Next Column</a>
-                </div>
             </li>
         </div>
     `,
@@ -235,7 +233,6 @@ Vue.component('col4', {
     template: `
         <div class="col">
             <h2>Completed tasks</h2>
-            <div class="cards" style="background-color: lightgreen" v-for="card in column2">
                 <div class="cards" style="background-color: lightgreen" v-for="card in column4">
                 <p class="card-title">{{card.title}}</p>
                 <ul>
@@ -267,67 +264,64 @@ Vue.component('col4', {
 
 
 Vue.component('newcard', {
-    template: `
-    <section>
-    <!-- openModal - id модального окна (элемента div) -->
-    <a href="#openModal" class="btn btnModal">Create card</a>
-    <div id="openModal" class="modal">
-    <div class="modal-dialog">
-        <div class="modal-content">
-        <div class="modal-header">
-            <h3 class="modal-title">Fill out the card</h3>
-            <a href="#close" title="Close" class="close">×</a>
-        </div>
-        <div class="modal-body">    
+template: `
+<div>
+    <button @click="openModal = true" class="btn-create">Create card</button>
     
-        <form class="addform" @submit.prevent="onSubmit">
-            <p>
-                <label for="intitle">Title</label>
-                <input id="intitle" required v-model="title" maxlength="30" type="text" placeholder="title">
-            </p>
-            <label for="indescription">Description</label>
-            <textarea required id="indescription" rows="5" columns="10" v-model="description" maxlength="60"> </textarea>
-            <label for="indeadline">Deadline</label>
-            <input required type="date" required placeholder="дд.мм.гггг" id="indeadline" v-model="deadline">
-            <button type="submit">Add a card</button>
-        </form>
-        
-        </div>
+    <div v-if="openModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Fill out the card</h3>
+                <button @click="openModal = false" class="btn-close">×</button>
+            </div>
+            <form class="addform" @submit.prevent="onSubmit">
+                <p>
+                    <label for="intitle">Title</label>
+                    <input id="intitle" required v-model="title" maxlength="30" type="text" placeholder="title">
+                </p>
+                <p>
+                    <label for="indescription">Description</label>
+                    <textarea required id="indescription" rows="5" cols="10" v-model="description" maxlength="60"></textarea>
+                </p>
+                <p>
+                    <label for="indeadline">Deadline</label>
+                    <input required type="date" id="indeadline" v-model="deadline">
+                </p>
+                <button type="submit" class="btn-submit">Add a card</button>
+            </form>
         </div>
     </div>
-    </div>
-    </section>
-    `,
-    data() {
-        return {
-            title:null,
-            description: null,
-            date: null,
-            deadline: null,
-        }
-    },
-    methods: {
-        onSubmit() {
-            let card = {
-                title: this.title,
-                description: this.description,
-                date: new Date().toLocaleDateString().split("-").reverse().join("-"),
-                deadline: this.deadline,
-                reason: null,
-                transfer: false,
-                edit: null,
-                editB: false,
-                comdate: null,
-                current: true,
-            }
-            eventBus.$emit('addColumn1', card)
-            this.title = null
-            this.deadline = null
-            this.date = null
-            this.description = null
-            console.log(card)
-        }
+</div>
+`,
+data() {
+    return {
+        title: null,
+        description: null,
+        deadline: null,
+        openModal: false
     }
+},
+methods: {
+    onSubmit() {
+        let card = {
+            title: this.title,
+            description: this.description,
+            date: new Date().toLocaleDateString().split("-").reverse().join("-"),
+            deadline: this.deadline,
+            reason: null,
+            transfer: false,
+            edit: null,
+            editB: false,
+            current: true,
+        }
+        eventBus.$emit('addColumn1', card)
+        this.title = null
+        this.deadline = null
+        this.description = null
+        this.openModal = false
+        console.log(card)
+    }
+}
 })
 
 
