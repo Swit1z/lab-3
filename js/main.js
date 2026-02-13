@@ -1,336 +1,268 @@
 let eventBus = new Vue()
 
-Vue.component('cols', {
-    template:`
-    <div id="cols">
-        <newcard></newcard>
-        <div class="cols__content">
-            <col1 :column1="column1"></col1>
-            <col2 :column2="column2"></col2>
-            <col3 :column3="column3"></col3>
-            <col4 :column4="column4"></col4>
+// Универсальный компонент столбца
+Vue.component('kanban-column', {
+    template: `
+    <div class="col" :style="columnStyle">
+        <h2>{{ columnTitle }}</h2>
+        <div 
+            class="cards" 
+            v-for="(card, index) in cards" 
+            :key="index"
+            :style="{ 'background-color': columnColor }"
+        >
+            <!-- Кнопки удаления и редактирования для столбцов 1, 2 и 3 -->
+            <template v-if="columnIndex < 3">
+                <a @click="deleteCard(card)">Удалить</a>
+                <a @click="card.editB = true">Редактировать</a>
+            </template>
+            
+            <p class="card-title">{{ card.title }}</p>
+            <ul>
+                <li class="tasks">Описание: {{ card.description }}</li>
+                <li class="tasks">Дата создания: {{ card.date }}</li>
+                <li class="tasks">Дедлайн: {{ card.deadline }}</li>
+                
+                <li class="tasks" v-if="card.reason != null && columnIndex !== 0">
+                    Причина перевода: {{ card.reason }}
+                </li>
+                
+                <li class="tasks" v-if="card.edit != null">
+                    Последнее изменение: {{ card.edit }}
+                </li>
+                
+                <li class="tasks" v-if="card.editB">
+                    <form @submit.prevent="updateTask(card)">
+                        <p>Новый заголовок: 
+                            <input type="text" v-model="card.title" maxlength="30" placeholder="Заголовок">
+                        </p>
+                        <p>Новое описание: 
+                            <textarea v-model="card.description" cols="20" rows="5"></textarea>
+                        </p>
+                        <p><input type="submit" value="Редактировать"></p>
+                    </form>
+                </li>
+                
+                <li class="tasks" v-if="card.transfer && columnIndex === 2">
+                    <form @submit.prevent="transferToCol2(card)">
+                        <p>Причина перевода: 
+                            <input type="text" v-model="card.reason">
+                        </p>
+                        <p><input type="submit" value="ОК"></p>
+                    </form>
+                </li>
+                
+                <!-- Статус выполнения для последнего столбца -->
+                <li class="tasks" v-if="columnIndex === 3 && card.current">
+                    ✅ Выполнено в срок
+                </li>
+                <li class="tasks" v-if="columnIndex === 3 && !card.current">
+                    ⚠️ Не выполнено в срок
+                </li>
+            </ul>
+            
+            <template v-if="columnIndex < 2">
+                <a @click="moveToNextColumn(card)">Следующий столбец</a>
+            </template>
+            
+            <template v-if="columnIndex === 2">
+                <a @click="card.transfer = true">Последний столбец</a> | 
+                <a @click="moveToNextColumn(card)">Следующий столбец</a>
+            </template>
         </div>
     </div>
-`,
-    data() {
-        return {
-            column1: [],
-            column2: [],
-            column3: [],
-            column4: [],
-        }
-    },
-    methods: {
-
-    },
-    mounted() {
-        eventBus.$on('addColumn1', card => {
-            this.column1.push(card)
-        })
-        eventBus.$on('addColumn2', card => {
-            this.column2.push(card)
-        })
-        eventBus.$on('addColumn3', card => {
-            this.column3.push(card)
-        })
-        eventBus.$on('addColumn4', card => {
-            this.column4.push(card)
-            if (card.date > card.deadline) {
-                card.current = false
-            }
-        })
-    },
-    computed: {
-
-    }
-})
-
-Vue.component('col1', {
-    template: `
-        <div class="col">
-            <h2>Planned tasks</h2>
-            <li class="cards" style="background-color: #e79ba2" v-for="card in column1">
-            <a @click="deleteCard(card)">Delete</a> <a @click="card.editB = true">Edit</a>
-            <p class="card-title">{{card.title}}</p>
-                <ul>
-                    <li class="tasks">Description: {{card.description}}</li>
-                    <li class="tasks">Date of creation: {{card.date}}</li>
-                    <li class="tasks">Deadline: {{card.deadline}}</li>
-                    <li class="tasks" v-if="card.edit != null">Last change: {{ card.edit}}</li>
-                    <li class="tasks" v-if="card.editB">
-                        <form @submit.prevent="updateTask(card)">
-                            <p>New title: 
-                                <input type="text" v-model="card.title" maxlength="30" placeholder="Заголовок">
-                            </p>
-                            <p>New description: 
-                                <textarea v-model="card.description" cols="20" rows="5"></textarea>
-                            </p>
-                            <p>
-                                <input type="submit" value="Edit">
-                            </p>
-                        </form>
-                    </li>
-                </ul>
-                <a @click="nextcol(card)">Next Column</a>
-            </li>
-        </div>
     `,
     props: {
-        column1: {
+        cards: {
             type: Array,
+            required: true
         },
-        column2: {
-            type: Array,
+        columnIndex: {
+            type: Number,
+            required: true
+        }
+    },
+    computed: {
+        columnTitle() {
+            const titles = [
+                'Запланированные задачи',
+                'Задачи в работе',
+                'Тестирование',
+                'Завершенные задачи'
+            ]
+            return titles[this.columnIndex] || ''
         },
-        card: {
-            type: Object
+        columnColor() {
+            const colors = [
+                '#e79ba2',
+                'lightblue',
+                '#f5f287',
+                'lightgreen'
+            ]
+            return colors[this.columnIndex] || '#f9f9f9'
         },
-        errors: {
-            type: Array
+        columnStyle() {
+            return {}
         }
     },
     methods: {
-        nextcol(card) {
-            this.column1.splice(this.column1.indexOf(card), 1)
-            eventBus.$emit('addColumn2', card)
-            },
+        moveToNextColumn(card) {
+            const currentIndex = this.cards.indexOf(card)
+            if (currentIndex !== -1) {
+                this.cards.splice(currentIndex, 1)
+                
+                // Определяем событие для следующего столбца
+                const events = ['addColumn2', 'addColumn3', 'addColumn4']
+                const nextEvent = events[this.columnIndex]
+                
+                if (nextEvent) {
+                    eventBus.$emit(nextEvent, card)
+                }
+            }
+        },
         deleteCard(card) {
-            this.column1.splice(this.column1.indexOf(card),1)
+            const index = this.cards.indexOf(card)
+            if (index !== -1) {
+                this.cards.splice(index, 1)
+            }
         },
         updateTask(card) {
             card.editB = false
-            this.column1.push(card)
-            this.column1.splice(this.column1.indexOf(card), 1)
             card.edit = new Date().toLocaleString()
-        }
-    },
-})
-
-Vue.component('col2', {
-    template: `
-        <div class="col">
-            <h2>Tasks in progress</h2>
-            <li class="cards" style="background-color: lightblue" v-for="card in column2">
-                <a @click="card.editB = true">Edit</a> <br>
-                <p class="card-title">{{card.title}}</p>
-                <ul>
-                    <li class="tasks">Description: {{card.description}}</li>
-                    <li class="tasks">Date of creation:
-                    {{ card.date }}</li>
-                    <li class="tasks">Deadline: {{card.deadline}}</li>
-                    <li class="tasks" v-if="card.reason != null">Reason of transfer: {{ card.reason }}</li>
-                    <li class="tasks" v-if="card.edit != null">Last change: {{ card.edit}}</li>
-                    <li class="tasks" v-if="card.editB">
-                        <form @submit.prevent="updateTask(card)">
-                            <p>New title: 
-                                <input type="text" v-model="card.title" maxlength="30" placeholder="Заголовок">
-                            </p>
-                            <p>New description: 
-                                <textarea v-model="card.description" cols="20" rows="5"></textarea>
-                            </p>
-                            <p>
-                                <input type="submit" value="Edit">
-                            </p>
-                        </form>
-                    </li>
-                </ul>
-                <a @click="nextcol(card)">Next Column</a>
-            </li>
-        </div>
-    `,
-    props: {
-        column2: {
-            type: Array,
+            
+            // Перемещаем карточку в конец массива для обновления порядка
+            const index = this.cards.indexOf(card)
+            if (index !== -1) {
+                this.cards.splice(index, 1)
+                this.cards.push(card)
+            }
         },
-        card: {
-            type: Object
-        }
-    },
-    methods: {
-        nextcol(card) {
-            this.column2.splice(this.column2.indexOf(card), 1)
-            eventBus.$emit('addColumn3', card)
-        },
-        updateTask(card){
-            card.edit = new Date().toLocaleString()
-            card.editB = false
-            this.column2.push(card)
-            this.column2.splice(this.column2.indexOf(card), 1)
-        }
-    }
-})
-
-Vue.component('col3', {
-    template: `
-        <div class="col">
-            <h2>Testing</h2>
-            <li class="cards" style="background-color: #f5f287" v-for="card in column3">
-                    <a @click="card.editB = true">Edit</a> <br>
-                <p class="card-title">{{card.title}}</p>
-                <ul>
-                    <li class="tasks">Description: {{card.description}}</li>
-                    <li class="tasks">Date of creation:
-                    {{ card.date }}</li>
-                    <li class="tasks">Deadline: {{card.deadline}}</li>
-                    <li class="tasks" v-if="card.reason != null">Reason of transfer: {{ card.reason }}</li>
-                    <li class="tasks" v-if="card.edit != null">Last change: {{ card.edit}}</li>
-                    <li class="tasks" v-if="card.editB">
-                        <form @submit.prevent="updateTask(card)">
-                            <p>New title: 
-                                <input type="text" v-model="card.title" maxlength="30" placeholder="Заголовок">
-                            </p>
-                            <p>New description: 
-                                <textarea v-model="card.description" cols="20" rows="5"></textarea>
-                            </p>
-                            <p>
-                                <input type="submit" value="Edit">
-                            </p>
-                        </form>
-                    </li>
-                    <li class="tasks" v-if="card.transfer">
-                        <form @submit.prevent="lastcol(card)">
-                            <p>The reason of transfer:
-                                <input type="text" v-model="card.reason">
-                            </p>
-                            <p>
-                                <input type="submit" value="OK">
-                            </p>
-                        </form>
-                    </li>
-                </ul>
-                <a @click="card.transfer =true">Last Column</a>  | <a @click="nextcol(card)">Next Column</a>
-            </li>
-        </div>
-    `,
-    props: {
-        column3: {
-            type: Array,
-        },
-        card: {
-            type: Object
-        }
-    },
-    methods: {
-        nextcol(card) {
-            this.column3.splice(this.column3.indexOf(card), 1)
-            eventBus.$emit('addColumn4', card)
-        },
-        lastcol(card) {
+        transferToCol2(card) {
             card.transfer = false
-            this.column3.splice(this.column3.indexOf(card), 1)
-            eventBus.$emit('addColumn2', card)
-        },
-        updateTask(card){
-            card.edit = new Date().toLocaleString()
-            card.editB = false
-            this.column3.push(card)
-            this.column3.splice(this.column3.indexOf(card), 1)
+            const index = this.cards.indexOf(card)
+            if (index !== -1) {
+                this.cards.splice(index, 1)
+                eventBus.$emit('addColumn2', card)
+            }
         }
     }
 })
 
-Vue.component('col4', {
+Vue.component('cols', {
     template: `
-        <div class="col">
-            <h2>Completed tasks</h2>
-                <div class="cards" style="background-color: lightgreen" v-for="card in column4">
-                <p class="card-title">{{card.title}}</p>
-                <ul>
-                    <li class="tasks">Description: {{card.description}}</li>
-                    <li class="tasks">Date of creation:
-                    {{ card.date }}</li>
-                    <li class="tasks">Deadline: {{card.deadline}}</li>
-                    <li class="tasks" v-if="card.current"> Сompleted on time</li>
-                    <li class="tasks" v-else>Not completed on time</li>
-                </ul>
-                </div>
-        </div>
-    `,
-    props: {
-        column4: {
-            type: Array,
-        },
-        card: {
-            type: Object
-        }
-    },
-    methods: {
-
-    },
-    computed:  {
-
-    },
-})
-
-
-Vue.component('newcard', {
-template: `
-<div>
-    <button @click="openModal = true" class="btn-create">Create card</button>
-    
-    <div v-if="openModal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Fill out the card</h3>
-                <button @click="openModal = false" class="btn-close">×</button>
-            </div>
-            <form class="addform" @submit.prevent="onSubmit">
-                <p>
-                    <label for="intitle">Title</label>
-                    <input id="intitle" required v-model="title" maxlength="30" type="text" placeholder="title">
-                </p>
-                <p>
-                    <label for="indescription">Description</label>
-                    <textarea required id="indescription" rows="5" cols="10" v-model="description" maxlength="60"></textarea>
-                </p>
-                <p>
-                    <label for="indeadline">Deadline</label>
-                    <input required type="date" id="indeadline" v-model="deadline">
-                </p>
-                <button type="submit" class="btn-submit">Add a card</button>
-            </form>
+    <div id="cols">
+        <newcard></newcard>
+        <div class="cols__content">
+            <kanban-column 
+                v-for="(column, index) in columns" 
+                :key="index"
+                :cards="column.cards"
+                :column-index="index"
+            ></kanban-column>
         </div>
     </div>
-</div>
-`,
-data() {
-    return {
-        title: null,
-        description: null,
-        deadline: null,
-        openModal: false
-    }
-},
-methods: {
-    onSubmit() {
-        let card = {
-            title: this.title,
-            description: this.description,
-            date: new Date().toLocaleDateString().split("-").reverse().join("-"),
-            deadline: this.deadline,
-            reason: null,
-            transfer: false,
-            edit: null,
-            editB: false,
-            current: true,
+    `,
+    data() {
+        return {
+            columns: [
+                { cards: [] }, // column1
+                { cards: [] }, // column2
+                { cards: [] }, // column3
+                { cards: [] }  // column4
+            ]
         }
-        eventBus.$emit('addColumn1', card)
-        this.title = null
-        this.deadline = null
-        this.description = null
-        this.openModal = false
-        console.log(card)
+    },
+    mounted() {
+        eventBus.$on('addColumn1', card => {
+            this.columns[0].cards.push(card)
+        })
+        eventBus.$on('addColumn2', card => {
+            this.columns[1].cards.push(card)
+        })
+        eventBus.$on('addColumn3', card => {
+            this.columns[2].cards.push(card)
+        })
+        eventBus.$on('addColumn4', card => {
+            // Проверка дедлайна
+            const creationDate = new Date(card.date.split('-').reverse().join('-'))
+            const deadlineDate = new Date(card.deadline)
+            const completionDate = new Date()
+            
+            // Если дата завершения позже дедлайна
+            if (completionDate > deadlineDate) {
+                card.current = false
+            } else {
+                card.current = true
+            }
+            
+            this.columns[3].cards.push(card)
+        })
     }
-}
 })
 
+Vue.component('newcard', {
+    template: `
+    <div>
+        <button @click="openModal = true">Создать карточку</button>
+        <div v-if="openModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3>Заполните карточку</h3>
+                    <button @click="openModal = false" class="btn-close">×</button>
+                </div>
+                <form class="addform" @submit.prevent="onSubmit">
+                    <p>
+                        <label for="intitle">Заголовок</label>
+                        <input id="intitle" required v-model="title" maxlength="30" type="text" placeholder="заголовок">
+                    </p>
+                    <p>
+                        <label for="indescription">Описание</label>
+                        <textarea required id="indescription" rows="5" cols="10" v-model="description" maxlength="60"></textarea>
+                    </p>
+                    <p>
+                        <label for="indeadline">Дедлайн</label>
+                        <input required type="date" id="indeadline" v-model="deadline">
+                    </p>
+                    <button type="submit" class="btn-submit">Добавить карточку</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    `,
+    data() {
+        return {
+            title: null,
+            description: null,
+            deadline: null,
+            openModal: false
+        }
+    },
+    methods: {
+        onSubmit() {
+            let card = {
+                title: this.title,
+                description: this.description,
+                date: new Date().toLocaleDateString().split("-").reverse().join("-"),
+                deadline: this.deadline,
+                reason: null,
+                transfer: false,
+                edit: null,
+                editB: false,
+                current: true,
+            }
+            eventBus.$emit('addColumn1', card)
+            this.title = null
+            this.deadline = null
+            this.description = null
+            this.openModal = false
+            console.log(card)
+        }
+    }
+})
 
 let app = new Vue({
     el: '#app',
     data: {
         name: 'Kanban'
-    },
-    methods: {
-
     }
 })
