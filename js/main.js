@@ -132,11 +132,14 @@ Vue.component('kanban-column', {
             card.editB = false
             card.edit = new Date().toLocaleString()
             
+            
             // Перемещаем карточку в конец массива для обновления порядка
             const index = this.cards.indexOf(card)
             if (index !== -1) {
                 this.cards.splice(index, 1)
                 this.cards.push(card)
+                console.log('Карточка изменена')  
+                eventBus.$emit('cardUpdated')
             }
         },
         transferToCol2(card) {
