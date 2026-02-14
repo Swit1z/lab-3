@@ -169,36 +169,75 @@ Vue.component('cols', {
                 { cards: [] }, // column2
                 { cards: [] }, // column3
                 { cards: [] }  // column4
-            ]
+            ],
+            nextCardId: 1
+        }
+    },
+
+    methods: {
+        save() {
+            const data = {
+                columns: this.columns,
+                nextCardId: this.nextCardId
+            }
+            localStorage.setItem('kanban-board-v2', JSON.stringify(data))
+        },
+
+        load() {
+            const saved = localStorage.getItem('kanban-board-v2')
+            if (saved) {
+                const data = JSON.parse(saved)
+                
+                this.columns = data.columns || this.columns
+                this.nextCardId = data.nextCardId || 1
+            }
+        },
+        addCardToColumn(columnIndex, card) {
+            if (columnIndex === 0) {
+                card.id = this.nextCardId++
+            }
+            if (columnIndex === 3) {
+                
+                const deadlineDate = new Date(card.deadline)
+                const completionDate = new Date()
+                card.current = completionDate <= deadlineDate
+            }
+            this.columns[columnIndex].cards.push(card)
+            this.save()  
         }
     },
     mounted() {
+        this.load()  // сначала загружаем
+
+        // Теперь все события идут через один метод addCardToColumn
         eventBus.$on('addColumn1', card => {
-            this.columns[0].cards.push(card)
+            this.addCardToColumn(0, card)
         })
         eventBus.$on('addColumn2', card => {
-            this.columns[1].cards.push(card)
+            this.addCardToColumn(1, card)
         })
         eventBus.$on('addColumn3', card => {
-            this.columns[2].cards.push(card)
+            this.addCardToColumn(2, card)
         })
         eventBus.$on('addColumn4', card => {
-            // Проверка дедлайна
-            const creationDate = new Date(card.date.split('-').reverse().join('-'))
-            const deadlineDate = new Date(card.deadline)
-            const completionDate = new Date()
-            
-            // Если дата завершения позже дедлайна
-            if (completionDate > deadlineDate) {
-                card.current = false
-            } else {
-                card.current = true
-            }
-            
-            this.columns[3].cards.push(card)
+            this.addCardToColumn(3, card)
         })
+
+        // Дополнительно: сохраняем при любых изменениях внутри колонок
+        // (удаление, редактирование, перемещение по кнопкам)
+        eventBus.$on('cardUpdated', () => {
+            this.save()
+        })
+        eventBus.$on('cardDeleted', () => {
+            this.save()
+        })
+    },
+
+    beforeDestroy() {
+        this.save()
     }
 })
+   
 
 Vue.component('newcard', {
     template: `
