@@ -124,6 +124,8 @@ Vue.component('kanban-column', {
             const index = this.cards.indexOf(card)
             if (index !== -1) {
                 this.cards.splice(index, 1)
+                console.log('Карточка удалена из массива')  
+                eventBus.$emit('cardDeleted') 
             }
         },
         updateTask(card) {
